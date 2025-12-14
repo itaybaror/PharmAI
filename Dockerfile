@@ -17,4 +17,4 @@ EXPOSE 8080
 ENV NAME World
 
 # Run app.py when the container launches
-CMD ["python", "app/main.py"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -132,7 +132,7 @@ celerybeat-schedule
 celerybeat.pid
 
 resources.md
-
+template.py
 # SageMath parsed files
 *.sage.py
 

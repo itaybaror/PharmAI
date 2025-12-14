@@ -4,7 +4,7 @@ AI-powered pharmacist assistant for a retail pharmacy chain.
 
 # To build the image run the following command
 
-docker build -t PharmAI .
+docker build -t pharmai .
 
 # To run the container run the following command
 
