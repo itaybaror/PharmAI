@@ -20,7 +20,7 @@ docker run -p 8080:8080 -d PharmAI
 # Dev environment
 Use volume to persist data
 
-docker run --name pharmai-container -p 8080:8080 -v "$(pwd)/app":/app  pharmai
+docker run --name pharmai-container -p 8080:8080 -v "$(pwd)/app":/app --env-file .env pharmai
 
 # To do before submitting
 - Remove dev environment binding (app folder copy)
@@ -28,3 +28,4 @@ docker run --name pharmai-container -p 8080:8080 -v "$(pwd)/app":/app  pharmai
 
 # Libraries and technologies
 - Langchain
+- pydantic
