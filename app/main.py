@@ -1,19 +1,15 @@
 # app/main.py
-from __future__ import annotations
-
-import os
-from typing import Any, Dict, List
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-load_dotenv()
+from app.intent import detect_intent
 
 app = FastAPI(title="PharmAI", version="0.0.1")
 
 
 class ChatRequest(BaseModel):
-    conversation: List[Dict[str, Any]] = Field(default_factory=list)
+    conversation: list[dict] = Field(default_factory=list)
+    user_id: str | None = None
 
 
 @app.get("/health")
@@ -22,9 +18,14 @@ def health():
 
 
 @app.post("/chat")
-def chat(payload: ChatRequest):
-    last_user = next((m.get("content") for m in reversed(payload.conversation) if m.get("role") == "user"), "")
+def chat_route(payload: ChatRequest):
+    last_user = next(
+        (m.get("content") for m in reversed(payload.conversation) if m.get("role") == "user"),
+        "",
+    )
+    intent = detect_intent(last_user)
+
     return {
-        "assistant": f"Echo: {last_user}",
-        "debug": {"messages_received": len(payload.conversation)},
+        "assistant": f"Detected intent: {intent.intent}",
+        "intent": intent.model_dump(),
     }

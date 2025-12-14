@@ -1,1 +1,5 @@
-docker run --name pharmai-container -p 8080:8080 -v "$(pwd)/app":/app --env-file .env pharmai
+docker run --name pharmai-container \
+  -p 8080:8000 \
+  -v "$(pwd)":/app \
+  --env-file .env \
+  pharmai
