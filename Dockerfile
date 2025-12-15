@@ -13,6 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Make port 8080 available to the world outside this container
 EXPOSE 8080
 
+# Prevent Python from creating __pycache__/ *.pyc files inside the container
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# (Optional) Print logs immediately (no buffering), nicer for Docker logs
+ENV PYTHONUNBUFFERED=1
+
 # Define environment variable
 ENV NAME World
 
