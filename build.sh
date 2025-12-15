@@ -1,1 +1,1 @@
-docker build -t pharmai .
+docker build --no-cache -t pharmai .

@@ -6,11 +6,9 @@ from app.agent import handle_chat
 
 
 def mount_ui(app):
-    def _chat_fn(message: str, history: list[tuple[str, str]]):
-        conversation: list[dict] = []
-        for user_msg, bot_msg in history:
-            conversation.append({"role": "user", "content": user_msg})
-            conversation.append({"role": "assistant", "content": bot_msg})
+    def _chat_fn(message: str, history: list[dict]):
+        # history is already [{"role": "user"/"assistant", "content": "..."}] when type="messages"
+        conversation = list(history)
         conversation.append({"role": "user", "content": message})
 
         result = handle_chat(ChatRequest(conversation=conversation))

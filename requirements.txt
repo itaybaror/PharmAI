@@ -3,5 +3,5 @@ uvicorn
 pydantic
 python-dotenv
 openai
-gradio
+gradio>=4.26
 requests
