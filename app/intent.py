@@ -25,7 +25,7 @@ def detect_intent(user_text: str) -> IntentDetection:
             f"Today is {today}. Classify the user's message into one intent:\n"
             "- STOCK_CHECK: asks if we have it / in stock / available\n"
             "- PRESCRIPTION_CHECK: asks if Rx/prescription is required\n"
-            "- MED_LOOKUP: asks for facts like usage instructions/ingredients\n"
+            "- MED_LOOKUP: asks for facts like usage instructions/ingredient/warnings\n"
             "- UNKNOWN: anything else\n"
             "Extract medication_query (include strength like '200mg' if present)."
         ),

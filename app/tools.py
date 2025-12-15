@@ -1,35 +1,50 @@
 # app/tools.py
-from typing import Optional
-
-# MEDS lives in db.py at the project root
+import logging
 from app.db import MEDS
 
+logger = logging.getLogger("app.tools")
 
-def _normalize(s: str) -> str:
+
+def _norm(s: str) -> str:
     return " ".join((s or "").strip().lower().split())
 
 
-def _find_medication(query: str) -> Optional[dict]:
-    q = _normalize(query)
-    if not q:
+def _find_medication_in_text(text: str) -> dict | None:
+    t = _norm(text)
+    if not t:
         return None
 
     for med in MEDS:
-        if q in _normalize(med["brand_name"]) or q in _normalize(med["generic_name"]):
+        brand = _norm(med.get("brand_name", ""))
+        generic = _norm(med.get("generic_name", ""))
+
+        if brand and brand in t:
+            return med
+        if generic and generic in t:
             return med
 
-    for med in MEDS:
         for a in med.get("aliases", []):
-            if q in _normalize(a):
+            aa = _norm(a)
+            if aa and aa in t:
                 return med
 
     return None
 
 
-def get_medication_by_name(query: str) -> dict:
-    """Tool: return factual, label-style medication info from an in-memory dataset."""
-    med = _find_medication(query)
+def resolve_medication_from_text(text: str) -> str | None:
+    med = _find_medication_in_text(text)
     if not med:
+        return None
+    name = (med.get("generic_name") or med.get("brand_name") or "").strip()
+    return name if name else None
+
+
+def get_medication_by_name(query: str) -> dict:
+    logger.info("get_medication_by_name query=%r", query)
+
+    med = _find_medication_in_text(query)
+    if not med:
+        logger.info("no match query=%r", query)
         return {
             "found": False,
             "message": (
@@ -38,20 +53,22 @@ def get_medication_by_name(query: str) -> dict:
             ),
         }
 
-    display_name = f"{med['brand_name']} ({med['generic_name']}) {med['strength']}".strip()
+    logger.info("matched brand=%r generic=%r", med.get("brand_name"), med.get("generic_name"))
+
+    display_name = f"{med.get('brand_name', '')} ({med.get('generic_name', '')}) {med.get('strength', '')}".strip()
 
     return {
         "found": True,
         "med": {
-            "medication_id": med["medication_id"],
+            "medication_id": med.get("medication_id"),
             "name": display_name,
-            "brand_name": med["brand_name"],
-            "generic_name": med["generic_name"],
-            "active_ingredients": med["active_ingredients"],
-            "form": med["form"],
-            "strength": med["strength"],
-            "requires_prescription": bool(med["rx_required"]),
-            "dosage_instructions": med["usage_instructions"],
-            "warnings": med["warnings"],
+            "brand_name": med.get("brand_name"),
+            "generic_name": med.get("generic_name"),
+            "active_ingredients": med.get("active_ingredients", []),
+            "form": med.get("form"),
+            "strength": med.get("strength"),
+            "requires_prescription": bool(med.get("rx_required")),
+            "dosage_instructions": med.get("usage_instructions"),
+            "warnings": med.get("warnings"),
         },
     }
