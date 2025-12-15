@@ -1,8 +1,10 @@
 # app/main.py
+import os
 from fastapi import FastAPI
 
 from app.schemas import ChatRequest
 from app.agent import handle_chat
+from app.ui import mount_ui
 
 # FastAPI app entrypoint (this is what uvicorn loads)
 app = FastAPI(title="PharmAI", version="0.0.1")
@@ -17,3 +19,8 @@ def health():
 def chat_route(payload: ChatRequest):
     # main.py stays “thin”: validate request -> delegate to agent logic
     return handle_chat(payload)
+
+
+# Visit: http://localhost:8080/ui
+if os.getenv("ENABLE_UI", "1") == "1":
+    mount_ui(app)

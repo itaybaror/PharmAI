@@ -94,6 +94,7 @@ def handle_chat(payload: ChatRequest) -> dict:
     intent = detect_intent(last_user)
 
     handler = ROUTES.get(intent.intent)
+    # Go to appropriate workflow
     if handler:
         return handler(intent, last_user)
 
