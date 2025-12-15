@@ -15,12 +15,22 @@ detatched:
 docker run -p 8080:8080 -d PharmAI
 
 
+# Deliv environment
+docker rm -f pharmai-container 2>/dev/null
 
+docker run --name pharmai-container \
+  -p 8080:8000 \
+  --env-file .env \
+  pharmai
 
 # Dev environment
 Use volume to persist data
 
-docker run --name pharmai-container -p 8080:8080 -v "$(pwd)/app":/app --env-file .env pharmai
+docker run --name pharmai-container \
+  -p 8080:8000 \
+  -v "$(pwd)":/app \
+  --env-file .env \
+  pharmai
 
 # To do before submitting
 - Remove dev environment binding (app folder copy)
@@ -29,3 +39,6 @@ docker run --name pharmai-container -p 8080:8080 -v "$(pwd)/app":/app --env-file
 # Libraries and technologies
 - Langchain
 - pydantic
+
+# Swagger Documentation
+http://0.0.0.0:8080/docs
