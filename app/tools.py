@@ -1,6 +1,6 @@
 # app/tools.py
 import logging
-from app.db import MEDS, USERS
+from app.db import MEDS, USERS_BY_ID, MEDS_BY_ID
 
 logger = logging.getLogger("app.tools")
 
@@ -30,17 +30,6 @@ def _find_medication_in_text(text: str) -> dict | None:
             if aa and aa in t:
                 return med
 
-    return None
-
-
-def _get_user_by_id(user_id: str) -> dict | None:
-    """Return a user dict from USERS by user_id."""
-    uid = (user_id or "").strip()
-    if not uid:
-        return None
-    for u in USERS:
-        if u.get("user_id") == uid:
-            return u
     return None
 
 
@@ -144,15 +133,16 @@ def get_user_prescriptions(user_id: str) -> dict:
     """
     logger.info("get_user_prescriptions user_id=%r", user_id)
 
-    user = _get_user_by_id(user_id)
+    uid = (user_id or "").strip()
+    user = USERS_BY_ID.get(uid)
+
     if not user:
         return {"found_user": False, "message": "Unknown demo user. Please select a user from the dropdown."}
 
-    meds_by_id = {m.get("medication_id"): m for m in MEDS}
     prescriptions: list[dict] = []
 
     for mid in (user.get("prescribed_medications") or []):
-        m = meds_by_id.get(mid)
+        m = MEDS_BY_ID.get(mid)
         if m:
             prescriptions.append(_med_summary(m))
 
@@ -177,7 +167,8 @@ def user_has_prescription(user_id: str, medication_query: str) -> dict:
     """
     logger.info("user_has_prescription user_id=%r query=%r", user_id, medication_query)
 
-    user = _get_user_by_id(user_id)
+    uid = (user_id or "").strip()
+    user = USERS_BY_ID.get(uid)
     if not user:
         return {"found_user": False, "message": "Unknown demo user. Please select a user from the dropdown."}
 

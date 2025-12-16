@@ -84,3 +84,7 @@ MEDS = [
         "in_stock": False,
     },
 ]
+
+# Indexes for fast lookups (keep USERS/MEDS lists for readability + UI ordering)
+USERS_BY_ID = {u["user_id"]: u for u in USERS}
+MEDS_BY_ID = {m["medication_id"]: m for m in MEDS}
