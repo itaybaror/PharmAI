@@ -25,6 +25,7 @@ def build_med_response(med: dict, section: str) -> str:
         ingredients = ", ".join(med.get("active_ingredients") or []) or "Not available."
         return f"**{name}**\n\nActive ingredient(s): {ingredients}\n\n{disclaimer}"
 
+    # FULL card
     parts: list[str] = [f"**{name}**"]
 
     ingredients = ", ".join(med.get("active_ingredients") or [])
@@ -41,6 +42,19 @@ def build_med_response(med: dict, section: str) -> str:
     return "\n\n".join(parts)
 
 
+def _tool_error(intent, res: dict) -> dict:
+    """Convert a tools.py error_code into a user-facing reply (and log it once)."""
+    code = res.get("error_code") or "TOOL_ERROR"
+    logger.warning("MED_LOOKUP tool_error code=%s", code)
+
+    if code in {"MISSING_MEDICATION_QUERY", "MED_NOT_FOUND"}:
+        msg = "I couldn't find that medication in the demo database. Try a brand or generic name (e.g., 'Advil', 'Ibuprofen')."
+    else:
+        msg = "Something went wrong while looking that up."
+
+    return {"assistant": msg, "intent": intent.model_dump(), "tool": res}
+
+
 def handle(intent, last_user: str, conversation: list[dict], user_id: str | None) -> dict:
     """Resolve medication, fetch facts via tool, and respond with the requested info section."""
     logger.info("MED_LOOKUP last_user=%r", last_user)
@@ -48,29 +62,22 @@ def handle(intent, last_user: str, conversation: list[dict], user_id: str | None
     # Intent should resolve medication_query using conversation context.
     query = (getattr(intent, "medication_query", None) or "").strip()
     if not query:
+        # This is conversational clarification, not a tools error.
         return {
             "assistant": "Which medication are you asking about? (e.g., 'Ibuprofen 200mg')",
             "intent": intent.model_dump(),
         }
 
-    logger.info("MED_LOOKUP medication_query=%r", query)
     tool_result = get_medication_by_name(query)
-
-    if not tool_result.get("found"):
-        return {
-            "assistant": tool_result.get("message", "I couldn't find that medication."),
-            "intent": intent.model_dump(),
-            "tool": tool_result,
-        }
+    if not tool_result.get("ok"):
+        return _tool_error(intent, tool_result)
 
     med = tool_result["med"]
     section = getattr(intent, "med_info_type", "FULL")
-    logger.info("MED_LOOKUP section=%s", section)
+    logger.info("MED_LOOKUP medication_query=%r section=%s", query, section)
 
     # If Rx is required, we still share label-style facts, but add a clear Rx note.
-    prefix = ""
-    if med.get("requires_prescription"):
-        prefix = "Prescription-only medication.\n\n"
+    prefix = "Prescription-only medication.\n\n" if med.get("requires_prescription") else ""
 
     return {
         "assistant": prefix + build_med_response(med, section),

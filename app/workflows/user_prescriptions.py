@@ -7,27 +7,46 @@ from app.tools import get_user_prescriptions, user_has_prescription
 logger = logging.getLogger("app.workflows.user_prescriptions")
 
 
+def _display_med(m: dict) -> str:
+    """Format a med summary dict (from tools) for chat output."""
+    return f"{m.get('brand_name')} ({m.get('generic_name')}) {m.get('strength')}".strip()
+
+
+def _tool_error(intent, res: dict) -> dict:
+    """Convert a tool error response into a user-facing message (workflow owns the wording)."""
+    code = res.get("error_code", "TOOL_ERROR")
+
+    if code == "MISSING_USER_ID":
+        msg = "Please select a demo user from the dropdown so I can check prescriptions."
+    elif code == "USER_NOT_FOUND":
+        msg = "That demo user doesn’t exist. Please select a user from the dropdown."
+    elif code == "MISSING_MEDICATION_QUERY":
+        msg = "Which medication should I check? (e.g., 'Zoloft')"
+    elif code == "MED_NOT_FOUND":
+        msg = "I couldn't find that medication in the demo database. Try a brand or generic name."
+    else:
+        msg = "Something went wrong while checking the demo database."
+
+    logger.warning("USER_PRESCRIPTIONS tool_error=%s", code)
+
+    return {
+        "assistant": msg,
+        "intent": intent.model_dump(),
+        "tool_error": {"error_code": code},
+    }
+
+
 def handle(intent, last_user: str, conversation: list[dict], user_id: str | None) -> dict:
     """Handle USER_PRESCRIPTIONS intent using the demo user_id passed from the UI."""
-    uid = (user_id or "").strip()
     action = getattr(intent, "prescriptions_action", "UNKNOWN")
+    uid = (user_id or "").strip()
 
-    logger.info("USER_PRESCRIPTIONS user_id=%r action=%s last_user=%r", uid, action, last_user)
-
-    if not uid:
-        return {
-            "assistant": "Please select a demo user from the dropdown so I can check prescriptions.",
-            "intent": intent.model_dump(),
-        }
+    logger.info("USER_PRESCRIPTIONS action=%s uid=%s", action, uid)
 
     if action == "LIST":
         res = get_user_prescriptions(uid)
-        if not res.get("found_user"):
-            return {
-                "assistant": res.get("message", "Unknown demo user."),
-                "intent": intent.model_dump(),
-                "tool": res,
-            }
+        if not res.get("ok"):
+            return _tool_error(intent, res)
 
         user = res.get("user") or {}
         meds = res.get("prescriptions") or []
@@ -41,34 +60,19 @@ def handle(intent, last_user: str, conversation: list[dict], user_id: str | None
 
         lines = [f"Prescriptions for **{user.get('full_name', 'user')}**:"]
         for m in meds:
-            name = f"{m.get('brand_name')} ({m.get('generic_name')}) {m.get('strength')}".strip()
-            lines.append(f"- {name}")
+            lines.append(f"- {_display_med(m)}")
+
         return {"assistant": "\n".join(lines), "intent": intent.model_dump(), "tool": res}
 
     if action == "HAS":
         q = (getattr(intent, "medication_query", None) or "").strip()
-        if not q:
-            return {
-                "assistant": "Which medication should I check? (e.g., 'Zoloft')",
-                "intent": intent.model_dump(),
-            }
 
         res = user_has_prescription(uid, q)
-        if not res.get("found_user"):
-            return {
-                "assistant": res.get("message", "Unknown demo user."),
-                "intent": intent.model_dump(),
-                "tool": res,
-            }
-        if not res.get("found_med"):
-            return {
-                "assistant": res.get("message", "I couldn't find that medication."),
-                "intent": intent.model_dump(),
-                "tool": res,
-            }
+        if not res.get("ok"):
+            return _tool_error(intent, res)
 
         med = res.get("med") or {}
-        display = f"{med.get('brand_name')} ({med.get('generic_name')}) {med.get('strength')}".strip()
+        display = _display_med(med)
 
         if res.get("has_prescription"):
             return {
@@ -77,7 +81,6 @@ def handle(intent, last_user: str, conversation: list[dict], user_id: str | None
                 "tool": res,
             }
 
-        # If it's OTC, explain why it won't appear in the user's prescriptions list
         if not med.get("rx_required", False):
             return {
                 "assistant": (
