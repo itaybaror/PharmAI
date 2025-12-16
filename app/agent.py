@@ -19,7 +19,12 @@ def get_last_user_message(conversation: list[dict]) -> str:
 def handle_chat(payload: ChatRequest) -> dict:
     """Detect intent for the latest user message, apply clinician gate, then route to a workflow."""
     last_user = get_last_user_message(payload.conversation)
-    logger.info("handle_chat conversation_len=%s last_user=%r", len(payload.conversation), last_user)
+    logger.info(
+        "handle_chat conversation_len=%s user_id=%r last_user=%r",
+        len(payload.conversation),
+        payload.user_id,
+        last_user,
+    )
 
     intent = detect_intent(last_user)
     logger.info(
@@ -49,7 +54,7 @@ def handle_chat(payload: ChatRequest) -> dict:
 
     handler = ROUTES.get(getattr(intent, "intent", ""))
     if handler:
-        return handler(intent, last_user, payload.conversation)
+        return handler(intent, last_user, payload.conversation, payload.user_id)
 
     return {
         "assistant": f"Detected intent: {intent.intent} (workflow not implemented yet)",

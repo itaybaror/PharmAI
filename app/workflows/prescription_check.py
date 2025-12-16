@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger("app.workflows.prescription_check")
 
 
-def handle(intent, last_user: str, conversation: list[dict]) -> dict:
+def handle(intent, last_user: str, conversation: list[dict], user_id: str | None) -> dict:
     logger.info("PRESCRIPTION_CHECK last_user=%r", last_user)
     return {
         "assistant": "PRESCRIPTION_CHECK workflow not implemented yet.",

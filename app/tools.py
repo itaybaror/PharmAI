@@ -1,14 +1,13 @@
 # app/tools.py
 import logging
-from app.db import MEDS
+
+from app.db import MEDS, USERS
 
 logger = logging.getLogger("app.tools")
 
 
 def _norm(s: str) -> str:
     """Normalize text for matching (lowercase + trim + collapse whitespace)."""
-    # (s or "") ensures we can safely call string methods even if s is None
-    # split() breaks on any whitespace; " ".join(...) collapses multiple spaces into one
     return " ".join((s or "").strip().lower().split())
 
 
@@ -19,23 +18,21 @@ def _find_medication_in_text(text: str) -> dict | None:
         return None
 
     for med in MEDS:
-        # Normalize candidate names so comparisons are case/whitespace-insensitive
         brand = _norm(med.get("brand_name", ""))
         generic = _norm(med.get("generic_name", ""))
 
-        # Substring match lets us handle full sentences like "what are warnings for ibuprofen?"
         if brand and brand in t:
             return med
         if generic and generic in t:
             return med
 
-        # Also allow matching known aliases (e.g., common shorthand or alternate brand names)
         for a in med.get("aliases", []):
             aa = _norm(a)
             if aa and aa in t:
                 return med
 
     return None
+
 
 def resolve_medication_from_text(text: str) -> str | None:
     """
@@ -59,9 +56,7 @@ def get_medication_by_name(query: str) -> dict:
     Purpose: Lookup a medication (brand/generic/alias) in MEDS and return label-style facts for agent workflows.
     Inputs: query: str
     Output: dict
-      - Success: {"found": True, "med": {"medication_id": any|None, "name": str, "brand_name": str|None, "generic_name": str|None,
-                                         "active_ingredients": list[str], "form": str|None, "strength": str|None,
-                                         "requires_prescription": bool, "dosage_instructions": str|None, "warnings": str|None}}
+      - Success: {"found": True, "med": {...}}
       - Failure: {"found": False, "message": str}
     Error Handling: If no match, returns {"found": False, "message": str}; does not raise exceptions for normal user input.
     Fallback: Accepts sentences; matches by substring against brand_name/generic_name/aliases; returns first match in MEDS.
@@ -81,9 +76,7 @@ def get_medication_by_name(query: str) -> dict:
 
     logger.info("matched brand=%r generic=%r", med.get("brand_name"), med.get("generic_name"))
 
-    display_name = (
-        f"{med.get('brand_name', '')} ({med.get('generic_name', '')}) {med.get('strength', '')}"
-    ).strip()
+    display_name = f"{med.get('brand_name', '')} ({med.get('generic_name', '')}) {med.get('strength', '')}".strip()
 
     return {
         "found": True,
@@ -98,5 +91,107 @@ def get_medication_by_name(query: str) -> dict:
             "requires_prescription": bool(med.get("rx_required")),
             "dosage_instructions": med.get("usage_instructions"),
             "warnings": med.get("warnings"),
+        },
+    }
+
+
+def get_user_by_id(user_id: str) -> dict | None:
+    """Find a user record in USERS by user_id."""
+    uid = (user_id or "").strip()
+    if not uid:
+        return None
+    for u in USERS:
+        if u.get("user_id") == uid:
+            return u
+    return None
+
+
+def get_user_prescriptions(user_id: str) -> dict:
+    """
+    Name: get_user_prescriptions
+    Purpose: Return the list of medications prescribed to a user (by user_id).
+    Inputs: user_id: str
+    Output: dict
+      - Success: {"found_user": True, "user": {"user_id": str, "full_name": str}, "prescriptions": list[dict]}
+      - Failure: {"found_user": False, "message": str}
+    Error Handling: If user_id is missing/unknown, returns found_user=False with a message.
+    Fallback: Returns an empty prescriptions list if the user exists but has none.
+    """
+    logger.info("get_user_prescriptions user_id=%r", user_id)
+
+    user = get_user_by_id(user_id)
+    if not user:
+        return {
+            "found_user": False,
+            "message": "Unknown demo user. Please select a user from the dropdown.",
+        }
+
+    ids = list(user.get("prescribed_medications") or [])
+    meds_by_id = {m.get("medication_id"): m for m in MEDS}
+
+    prescriptions: list[dict] = []
+    for mid in ids:
+        m = meds_by_id.get(mid)
+        if not m:
+            continue
+        prescriptions.append(
+            {
+                "medication_id": m.get("medication_id"),
+                "brand_name": m.get("brand_name"),
+                "generic_name": m.get("generic_name"),
+                "strength": m.get("strength"),
+                "rx_required": bool(m.get("rx_required")),
+            }
+        )
+
+    return {
+        "found_user": True,
+        "user": {"user_id": user.get("user_id"), "full_name": user.get("full_name")},
+        "prescriptions": prescriptions,
+    }
+
+
+def user_has_prescription(user_id: str, medication_query: str) -> dict:
+    """
+    Name: user_has_prescription
+    Purpose: Check whether a user is prescribed a specific medication (by name/alias in text).
+    Inputs: user_id: str, medication_query: str
+    Output: dict
+      - Success: {"found_user": True, "found_med": True, "has_prescription": bool, "med": {...}}
+      - Failure (no user): {"found_user": False, "message": str}
+      - Failure (no med): {"found_user": True, "found_med": False, "message": str}
+    Error Handling: Unknown user -> found_user=False. Unknown medication -> found_med=False.
+    Fallback: Medication matching uses substring match against brand/generic/aliases; first match wins.
+    """
+    logger.info("user_has_prescription user_id=%r query=%r", user_id, medication_query)
+
+    user = get_user_by_id(user_id)
+    if not user:
+        return {
+            "found_user": False,
+            "message": "Unknown demo user. Please select a user from the dropdown.",
+        }
+
+    med = _find_medication_in_text(medication_query)
+    if not med:
+        return {
+            "found_user": True,
+            "found_med": False,
+            "message": "I couldn't find that medication in the demo database. Try a brand or generic name.",
+        }
+
+    prescribed = set(user.get("prescribed_medications") or [])
+    mid = med.get("medication_id")
+
+    return {
+        "found_user": True,
+        "found_med": True,
+        "has_prescription": mid in prescribed,
+        "med": {
+            "medication_id": mid,
+            "brand_name": med.get("brand_name"),
+            "generic_name": med.get("generic_name"),
+            "strength": med.get("strength"),
+            "rx_required": bool(med.get("rx_required")),
         },
     }

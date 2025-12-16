@@ -53,7 +53,7 @@ def build_med_response(med: dict, section: str) -> str:
     return "\n\n".join(parts)
 
 
-def handle(intent, last_user: str, conversation: list[dict]) -> dict:
+def handle(intent, last_user: str, conversation: list[dict], user_id: str | None) -> dict:
     """Resolve medication, fetch facts via tool, and respond with the requested info section."""
     logger.info("MED_LOOKUP last_user=%r", last_user)
 

@@ -1,10 +1,16 @@
 # app/workflows/__init__.py
 from app.workflows.med_lookup import handle as med_lookup
-from app.workflows.stock_check import handle as stock_check
-from app.workflows.prescription_check import handle as prescription_check
+from app.workflows.user_prescriptions import handle as user_prescriptions
 
 ROUTES = {
     "MED_LOOKUP": med_lookup,
-    "STOCK_CHECK": stock_check,
-    "PRESCRIPTION_CHECK": prescription_check,
+    "USER_PRESCRIPTIONS": user_prescriptions,
+    "STOCK_CHECK": lambda intent, last_user, conversation, user_id: {
+        "assistant": "STOCK_CHECK workflow not implemented yet.",
+        "intent": intent.model_dump(),
+    },
+    "PRESCRIPTION_CHECK": lambda intent, last_user, conversation, user_id: {
+        "assistant": "PRESCRIPTION_CHECK workflow not implemented yet.",
+        "intent": intent.model_dump(),
+    },
 }
