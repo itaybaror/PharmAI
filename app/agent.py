@@ -26,7 +26,8 @@ def handle_chat(payload: ChatRequest) -> dict:
         last_user,
     )
 
-    intent = detect_intent(last_user)
+    # LLM-only multi-turn: detect intent using recent conversation context
+    intent = detect_intent(payload.conversation)
     logger.info(
         "intent=%s confidence=%.2f med_query=%r med_info_type=%s needs_clinician=%s",
         getattr(intent, "intent", None),
