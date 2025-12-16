@@ -1,3 +1,5 @@
+docker container prune --force
+
 docker run --name pharmai-container \
   -p 8080:8080 \
   -v "$(pwd)":/app \

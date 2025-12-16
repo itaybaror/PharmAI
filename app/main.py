@@ -3,9 +3,10 @@ import os
 import logging
 
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 
 from app.schemas import ChatRequest
-from app.agent import handle_chat
+from app.agent_stream import stream_chat
 from app.ui import mount_ui
 
 
@@ -15,7 +16,6 @@ logging.basicConfig(
     format="%(levelname)s: %(name)s - %(message)s",
 )
 
-# Silence noisy third-party logs (Gradio, http clients, uvicorn access logs)
 for name in (
     "gradio",
     "gradio.queueing",
@@ -38,11 +38,16 @@ def health():
     return {"ok": True}
 
 
+# Make /chat the streaming endpoint (SSE)
 @app.post("/chat")
 def chat_route(payload: ChatRequest):
-    return handle_chat(payload)
+    return StreamingResponse(
+        stream_chat(payload),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
-# Visit: http://localhost:8080/ui
+
 if os.getenv("ENABLE_UI", "1") == "1":
     mount_ui(app)
