@@ -14,7 +14,7 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 
 
 class IntentDetection(BaseModel):
-    intent: Literal["MED_LOOKUP", "USER_PRESCRIPTIONS", "STOCK_CHECK", "PRESCRIPTION_CHECK", "UNKNOWN"]
+    intent: Literal["MED_LOOKUP", "USER_PRESCRIPTIONS", "STOCK_CHECK", "UNKNOWN"]
     medication_query: str | None = Field(default=None)
 
     med_info_type: Literal["FULL", "WARNINGS", "DOSAGE", "INGREDIENTS"] = "FULL"
@@ -65,7 +65,6 @@ def detect_intent(conversation: list[dict]) -> IntentDetection:
             "Choose exactly one intent:\n"
             "- USER_PRESCRIPTIONS: asks about THEIR prescriptions (list them, or check if they have one for a drug)\n"
             "- STOCK_CHECK: asks if we have it / in stock / available\n"
-            "- PRESCRIPTION_CHECK: asks if Rx/prescription is required for a medication\n"
             "- MED_LOOKUP: asks for factual label-style info (ingredients, warnings, standard directions)\n"
             "- UNKNOWN: anything else\n\n"
             "Extract medication_query if a medication is mentioned or implied (include strength like '200mg' if present).\n\n"

@@ -29,6 +29,7 @@ MEDS = [
         "usage_instructions": "Adults: 500–1000 mg every 4–6 hours as needed. Max 4000 mg/day.",
         "warnings": "Avoid exceeding the maximum daily dose.",
         "aliases": ["acetaminophen", "panadol"],
+        "in_stock": True,
     },
     {
         "medication_id": "m002",
@@ -41,6 +42,7 @@ MEDS = [
         "usage_instructions": "Adults: 200–400 mg every 6–8 hours with food as needed. Max 1200 mg/day OTC.",
         "warnings": "May irritate the stomach.",
         "aliases": ["nurofen"],
+        "in_stock": True,
     },
     {
         "medication_id": "m003",
@@ -53,6 +55,7 @@ MEDS = [
         "usage_instructions": "Prescription-only: follow the dosing instructions provided by the prescriber.",
         "warnings": "Do not stop abruptly without medical guidance; seek help for severe side effects.",
         "aliases": [],
+        "in_stock": True,
     },
     {
         "medication_id": "m004",
@@ -65,6 +68,7 @@ MEDS = [
         "usage_instructions": "Prescription-only: take exactly as directed; finish the full course unless told otherwise.",
         "warnings": "Possible allergic reactions; seek urgent care if rash, swelling, or breathing issues occur.",
         "aliases": ["amoxil"],
+        "in_stock": True,
     },
     {
         "medication_id": "m005",
@@ -77,5 +81,6 @@ MEDS = [
         "usage_instructions": "Prescription-only: follow the dosing instructions provided by the prescriber.",
         "warnings": "May cause gastrointestinal upset; seek medical help for signs of allergic reaction.",
         "aliases": ["co-amoxiclav"],
+        "in_stock": False,
     },
 ]

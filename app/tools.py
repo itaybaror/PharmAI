@@ -195,3 +195,45 @@ def user_has_prescription(user_id: str, medication_query: str) -> dict:
             "rx_required": bool(med.get("rx_required")),
         },
     }
+
+
+def get_medication_stock(query: str) -> dict:
+    """
+    Name: get_medication_stock
+    Purpose: Check whether a medication is currently in stock (and whether pickup today is possible).
+    Inputs: query: str
+    Output: dict
+      - Success: {"found": True, "med": {"medication_id": str|None, "brand_name": str|None, "generic_name": str|None, "strength": str|None},
+                 "in_stock": bool, "can_pickup_today": bool}
+      - Failure: {"found": False, "message": str}
+    Error Handling: If medication cannot be resolved from query, returns found=False with message.
+    Fallback: Matches by substring against brand/generic/aliases; first match wins.
+    """
+    logger.info("get_medication_stock query=%r", query)
+
+    med = _find_medication_in_text(query)
+    if not med:
+        return {
+            "found": False,
+            "message": (
+                f"I couldn't find a medication matching '{query}'. "
+                "Try a brand or generic name (e.g., 'Advil', 'Ibuprofen', 'Zoloft')."
+            ),
+        }
+
+    # For the demo, stock is stored on the med record in db.py (you'll add e.g. in_stock: True/False).
+    in_stock = bool(med.get("in_stock", True))
+    can_pickup_today = in_stock
+
+    return {
+        "found": True,
+        "med": {
+            "medication_id": med.get("medication_id"),
+            "brand_name": med.get("brand_name"),
+            "generic_name": med.get("generic_name"),
+            "strength": med.get("strength"),
+            "rx_required": bool(med.get("rx_required")),
+        },
+        "in_stock": in_stock,
+        "can_pickup_today": can_pickup_today,
+    }
