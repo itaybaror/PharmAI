@@ -17,7 +17,7 @@ class IntentDetection(BaseModel):
     intent: Literal["MED_LOOKUP", "USER_PRESCRIPTIONS", "STOCK_CHECK", "UNKNOWN"]
     medication_query: str | None = Field(default=None)
 
-    med_info_type: Literal["FULL", "WARNINGS", "DOSAGE", "INGREDIENTS"] = "FULL"
+    med_info_type: Literal["FULL", "WARNINGS", "DOSAGE", "INGREDIENTS", "PRESCRIPTION"] = "FULL"
 
     needs_clinician: bool = False
     clinician_reason: str | None = Field(default=None)
@@ -57,23 +57,22 @@ def detect_intent(conversation: list[dict]) -> IntentDetection:
             f"Today is {today}. Return JSON matching the provided schema.\n\n"
             "You will be given recent conversation context.\n"
             "The LAST USER message is the one to act on.\n\n"
-            "If the last user message is underspecified (e.g., 'how about Advil?', 'what about that?', 'is it in stock?', "
-            "'do I have a prescription for it?'), use the conversation context to:\n"
-            "- infer the intended workflow\n"
-            "- resolve what the user is referring to\n"
-            "- set medication_query when possible\n\n"
+            "If the last user message is underspecified (e.g., 'how about Advil?', 'what about that?', 'is it in stock?'), "
+            "use the conversation context to infer the intended workflow and resolve what the user is referring to.\n\n"
             "Choose exactly one intent:\n"
             "- USER_PRESCRIPTIONS: asks about THEIR prescriptions (list them, or check if they have one for a drug)\n"
             "- STOCK_CHECK: asks if we have it / in stock / available\n"
-            "- MED_LOOKUP: asks for factual label-style info (ingredients, warnings, standard directions)\n"
+            "- MED_LOOKUP: asks for factual label-style info about a medication\n"
             "- UNKNOWN: anything else\n\n"
-            "Extract medication_query if a medication is mentioned or implied (include strength like '200mg' if present).\n\n"
+            "Extract medication_query if a medication is mentioned or implied.\n\n"
             "If intent is USER_PRESCRIPTIONS, set prescriptions_action:\n"
             "- LIST: e.g., 'what are my prescriptions', 'list my meds'\n"
             "- HAS: e.g., 'do I have a prescription for zoloft'\n"
             "- UNKNOWN: otherwise\n\n"
             "If intent is MED_LOOKUP, set med_info_type:\n"
-            "- INGREDIENTS / WARNINGS / DOSAGE / FULL\n\n"
+            "- INGREDIENTS / WARNINGS / DOSAGE / PRESCRIPTION / FULL\n"
+            "Use PRESCRIPTION for questions like: 'Do I need a prescription for it?', 'Is this prescription-only?', "
+            "'Can I get this over the counter?'\n\n"
             "Set needs_clinician=True if the user asks for personalized medical advice, diagnosis, suitability, interactions based "
             "on personal context, pregnancy/breastfeeding safety, or anything that depends on personal medical context.\n"
             "If needs_clinician=True, set clinician_reason to ONE short user-facing sentence addressed to the user.\n"

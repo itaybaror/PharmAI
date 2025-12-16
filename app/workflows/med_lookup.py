@@ -9,9 +9,14 @@ logger = logging.getLogger("app.workflows.med_lookup")
 
 
 def build_med_response(med: dict, section: str) -> str:
-    """Build a response for FULL/WARNINGS/DOSAGE/INGREDIENTS using label-style facts."""
+    """Build a response for FULL/WARNINGS/DOSAGE/INGREDIENTS/PRESCRIPTION using label-style facts."""
     name = med.get("name") or "Medication"
     disclaimer = "For personal medical advice, consult a healthcare professional."
+
+    if section == "PRESCRIPTION":
+        if med.get("requires_prescription"):
+            return f"Yes — **{name}** requires a prescription.\n\n{disclaimer}"
+        return f"No — **{name}** is over-the-counter (no prescription required).\n\n{disclaimer}"
 
     if section == "WARNINGS":
         warnings = med.get("warnings") or "Not available."
@@ -59,10 +64,8 @@ def handle(intent, last_user: str, conversation: list[dict], user_id: str | None
     """Resolve medication, fetch facts via tool, and respond with the requested info section."""
     logger.info("MED_LOOKUP last_user=%r", last_user)
 
-    # Intent should resolve medication_query using conversation context.
     query = (getattr(intent, "medication_query", None) or "").strip()
     if not query:
-        # This is conversational clarification, not a tools error.
         return {
             "assistant": "Which medication are you asking about? (e.g., 'Ibuprofen 200mg')",
             "intent": intent.model_dump(),
@@ -76,8 +79,10 @@ def handle(intent, last_user: str, conversation: list[dict], user_id: str | None
     section = getattr(intent, "med_info_type", "FULL")
     logger.info("MED_LOOKUP medication_query=%r section=%s", query, section)
 
-    # If Rx is required, we still share label-style facts, but add a clear Rx note.
-    prefix = "Prescription-only medication.\n\n" if med.get("requires_prescription") else ""
+    # Only add the Rx prefix for non-PRESCRIPTION responses (otherwise it duplicates the answer).
+    prefix = ""
+    if section != "PRESCRIPTION" and med.get("requires_prescription"):
+        prefix = "Prescription-only medication.\n\n"
 
     return {
         "assistant": prefix + build_med_response(med, section),
