@@ -4,7 +4,7 @@ import gradio as gr
 
 from app.db import USERS
 from app.schemas import ChatRequest
-from app.agent_stream import stream_chat
+from app.agent import stream_chat
 
 
 def mount_ui(app):

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
 from app.schemas import ChatRequest
-from app.agent_stream import stream_chat
+from app.agent import stream_chat
 from app.ui import mount_ui
 
 
