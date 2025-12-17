@@ -40,4 +40,5 @@ def chat_route(payload: dict):
 
 
 if os.getenv("ENABLE_UI", "1") == "1":
+    print("PharmAI is running, UI: http://localhost:8080/ui")
     mount_ui(app)
