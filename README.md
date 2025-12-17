@@ -52,17 +52,13 @@ This project serves as a reference example of how to build a **predictable, audi
       - Build the image:
 
          ```sh
-         docker build -t pharmai .
+         docker build --no-cache -t pharmai .
          ```
 
       - Run the container:
 
          ```sh
-         docker run --name pharmai-container \
-            -p 8080:8080 \
-            -v "$(pwd)":/app \
-            --env-file .env \
-            pharmai
+         docker run --name pharmai-container -p 8080:8080 --env-file .env pharmai
          ```
 
 4. Access the Application
