@@ -88,12 +88,15 @@ def stream_chat(conversation: List[dict], user_id: str | None) -> Iterator[str]:
             store=False,
         ) as stream:
             for event in stream:
+                # If it's a text delta, yield it
+                # If not, then it can be tool calls etc, which we handle after the stream
                 if getattr(event, "type", None) == "response.output_text.delta":
                     delta = getattr(event, "delta", "") or ""
                     if delta:
                         assistant_text += delta
                         yield assistant_text
-
+        
+        # After streaming completes, get the final response
         final = stream.get_final_response()
 
         # 2) If model asked for tools, execute them and loop

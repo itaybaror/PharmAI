@@ -21,6 +21,9 @@ def mount_ui(app):
         def _chat_fn(message: str, history: list[dict], user_id_value: str):
             conversation = [{"role": m.get("role"), "content": m.get("content")} for m in (history or [])]
             conversation.append({"role": "user", "content": message})
+            # Stream the chat response
+            # Stops when stream_chat returns
+            # Continues as long as stream_chat yields text
             for text in stream_chat(conversation=conversation, user_id=user_id_value):
                 yield text
 
