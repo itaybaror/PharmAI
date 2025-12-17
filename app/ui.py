@@ -2,7 +2,6 @@
 import gradio as gr
 
 from app.db import USERS
-from app.schemas import ChatRequest
 from app.agent import handle_chat
 
 
@@ -23,7 +22,7 @@ def mount_ui(app):
         def _chat_fn(message: str, history: list[dict], user_id_value: str):
             conversation = list(history or [])
             conversation.append({"role": "user", "content": message})
-            result = handle_chat(ChatRequest(conversation=conversation, user_id=user_id_value))
+            result = handle_chat(conversation=conversation, user_id=user_id_value)
             return result.get("assistant", "")
 
         gr.ChatInterface(

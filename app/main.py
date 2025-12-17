@@ -4,7 +4,6 @@ import logging
 
 from fastapi import FastAPI
 
-from app.schemas import ChatRequest
 from app.agent import handle_chat
 from app.ui import mount_ui
 
@@ -34,8 +33,15 @@ def health():
 
 
 @app.post("/chat")
-def chat_route(payload: ChatRequest):
-    return handle_chat(payload)
+def chat_route(payload: dict):
+    # Expect:
+    # {
+    #   "conversation": [{"role":"user","content":"..."}...],
+    #   "user_id": "u001"
+    # }
+    conversation = payload.get("conversation") or []
+    user_id = payload.get("user_id")
+    return handle_chat(conversation=conversation, user_id=user_id)
 
 
 if os.getenv("ENABLE_UI", "1") == "1":
