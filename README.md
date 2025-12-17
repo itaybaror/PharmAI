@@ -2,6 +2,14 @@
 
 A demo pharmacy assistant built with OpenAI’s Responses API, structured tool-calling, and true server-side streaming.
 
+## Table of Contents
+
+- [About the Project](#about-the-project)
+- [Getting Started](#getting-started)
+- [Architecture](#architecture)
+- [Design Decisions](#design-decisions)
+- [Final Notes](#final-notes)
+
 ## About the Project
 
 PharmAI is a demo AI-powered pharmacy assistant designed to demonstrate how to build a clean, reliable, and debuggable LLM agent using modern OpenAI primitives.
@@ -23,48 +31,48 @@ The assistant allows users to:
 Disclaimer:
 This is a demo system only. It does not provide medical advice and cannot perform real-world actions.
 
----
+
 
 ## Getting Started
 
-### Prerequisites
+1. Prerequisites
 
-- Docker
-- An OpenAI API key
+      - Docker
+      - An OpenAI API key
 
-### Environment Variables
+2. Environment Variables
 
-Create a `.env` file or export the variable:
+      Create a `.env` file or export the variable:
 
-```bash
-OPENAI_API_KEY=your_api_key_here
-```
+      ```sh
+      OPENAI_API_KEY=your_api_key_here
+      ```
 
-### Run with Docker
+3. Run with Docker
 
-Build the image:
+      - Build the image:
 
-```bash
-docker build -t pharmai .
-```
+         ```sh
+         docker build -t pharmai .
+         ```
 
-Run the container:
+      - Run the container:
 
-```bash
-docker run --name pharmai-container \
-  -p 8080:8080 \
-  -v "$(pwd)":/app \
-  --env-file .env \
-  pharmai
-```
+         ```sh
+         docker run --name pharmai-container \
+            -p 8080:8080 \
+            -v "$(pwd)":/app \
+            --env-file .env \
+            pharmai
+         ```
 
-### Access the Application
+4. Access the Application
 
-- API: http://localhost:8080
-- UI:  http://localhost:8080/ui
-- FastAPI Docs: http://localhost:8080/docs
+      - API: http://localhost:8080
+      - UI:  http://localhost:8080/ui
+      - FastAPI Docs: http://localhost:8080/docs
 
----
+
 
 ## Architecture
 
@@ -107,7 +115,7 @@ app/
    - Defines explicit error-handling behavior
    - Forces tool usage when facts are required
 
----
+
 
 ## Design Decisions
 
@@ -162,7 +170,7 @@ app/
 
 </details>
 
----
+
 
 ## Final Notes
 
