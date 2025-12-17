@@ -8,6 +8,7 @@ A demo pharmacy assistant built with OpenAI’s Responses API, structured tool-c
 - [Getting Started](#getting-started)
 - [Architecture](#architecture)
 - [Design Decisions](#design-decisions)
+- [Deliverables](#deliverables)
 - [Resources & References](#resources--references)
 
 ## About the Project
@@ -191,6 +192,21 @@ app/
 > These workflows worked well but differed from agent-loop design.
 >
 > The deterministic implementation is preserved in the **`deterministic` branch**.
+
+## Deliverables
+
+This repository fulfills all required deliverables for the assignment:
+
+- **README.md**  
+  This document. It explains the project, architecture, design decisions, and how to run the system using Docker.
+
+- **Flow Evaluation (`flow-evaluation.md`)**  
+  The remaining deliverables — **multi-step flows**, **evidence**, and **evaluation plan** — are intentionally combined into a single document:
+  - Each section defines a concrete multi-step user workflow
+  - Screenshots provide evidence of correct behavior
+  - Evaluation criteria explain how each flow is assessed
+
+Combining these into one file keeps the evaluation cohesive and easy to follow, while still clearly addressing each required component. The agent itself supports many additional workflows beyond those documented; the selected flows represent clear, high-signal examples aligned with the assignment requirements.
 
 ## Resources & References
 
