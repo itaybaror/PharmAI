@@ -1,5 +1,6 @@
 # app/tools.py
 import logging
+from typing import Any
 
 from app.db import MEDS, USERS_BY_ID, MEDS_BY_ID
 
@@ -7,12 +8,10 @@ logger = logging.getLogger("app.tools")
 
 
 def _norm(s: str) -> str:
-    """Normalize text for matching (lowercase + trim + collapse whitespace)."""
     return " ".join((s or "").strip().lower().split())
 
 
 def _find_medication_in_text(text: str) -> dict | None:
-    """Return the first MEDS entry whose brand/generic/alias appears in the given text (substring match)."""
     t = _norm(text)
     if not t:
         return None
@@ -35,7 +34,6 @@ def _find_medication_in_text(text: str) -> dict | None:
 
 
 def _get_user(user_id: str) -> tuple[dict | None, dict | None]:
-    """Internal helper: return (user, error_dict). Tools use this to avoid repeating lookup logic."""
     uid = (user_id or "").strip()
     if not uid:
         return None, {"ok": False, "error_code": "MISSING_USER_ID"}
@@ -48,7 +46,6 @@ def _get_user(user_id: str) -> tuple[dict | None, dict | None]:
 
 
 def _get_medication(query: str) -> tuple[dict | None, dict | None]:
-    """Internal helper: return (med, error_dict) from free-text query."""
     q = (query or "").strip()
     if not q:
         return None, {"ok": False, "error_code": "MISSING_MEDICATION_QUERY"}
@@ -61,86 +58,49 @@ def _get_medication(query: str) -> tuple[dict | None, dict | None]:
 
 
 def _med_summary(med: dict) -> dict:
-    """Small shared med payload used by multiple workflows (keeps formatting consistent)."""
+    brand = med.get("brand_name") or ""
+    generic = med.get("generic_name") or ""
+    strength = med.get("strength") or ""
+    display = f"{brand} ({generic}) {strength}".strip()
+
     return {
         "medication_id": med.get("medication_id"),
         "brand_name": med.get("brand_name"),
         "generic_name": med.get("generic_name"),
         "strength": med.get("strength"),
         "rx_required": bool(med.get("rx_required")),
-        # Default True so meds without explicit in_stock behave as "available" in the demo.
         "in_stock": bool(med.get("in_stock", True)),
+        "display_name": display,
     }
 
 
-def get_medication_by_name(query: str) -> dict:
-    """
-    Name: get_medication_by_name
-    Purpose: Lookup a medication (brand/generic/alias) and return label-style facts for workflows.
-    Inputs: query: str
-    Output:
-      - Success: {"ok": True, "med": {...}}
-      - Failure: {"ok": False, "error_code": "..."}
-    Error Handling: Uses structured error_code (no user-facing prose).
-    Fallback: Substring match against brand/generic/aliases; first match wins.
-    """
-    logger.info("get_medication_by_name query=%r", query)
+def get_medication(query: str) -> dict:
+    logger.info("get_medication query=%r", query)
 
     med, err = _get_medication(query)
     if err:
         return err
 
     summary = _med_summary(med)
-    display_name = f"{summary.get('brand_name', '')} ({summary.get('generic_name', '')}) {summary.get('strength', '')}".strip()
-
     return {
         "ok": True,
         "med": {
             "medication_id": summary["medication_id"],
-            "name": display_name,
+            "name": summary["display_name"],
             "brand_name": summary["brand_name"],
             "generic_name": summary["generic_name"],
             "active_ingredients": med.get("active_ingredients", []),
             "form": med.get("form"),
             "strength": summary["strength"],
             "requires_prescription": summary["rx_required"],
+            "in_stock": summary["in_stock"],
             "dosage_instructions": med.get("usage_instructions"),
             "warnings": med.get("warnings"),
         },
     }
 
 
-def get_medication_stock(query: str) -> dict:
-    """
-    Name: get_medication_stock
-    Purpose: Check whether a medication is in stock (demo uses MEDS[].in_stock).
-    Inputs: query: str
-    Output:
-      - Success: {"ok": True, "med": {...}}
-      - Failure: {"ok": False, "error_code": "..."}
-    Error Handling: Uses structured error_code (no user-facing prose).
-    Fallback: Substring match against brand/generic/aliases; first match wins.
-    """
-    logger.info("get_medication_stock query=%r", query)
-
-    med, err = _get_medication(query)
-    if err:
-        return err
-
-    return {"ok": True, "med": _med_summary(med)}
-
-
 def get_user_prescriptions(user_id: str) -> dict:
-    """
-    Name: get_user_prescriptions
-    Purpose: Return the list of medications prescribed to a user.
-    Inputs: user_id: str
-    Output:
-      - Success: {"ok": True, "user": {...}, "prescriptions": list[dict]}
-      - Failure: {"ok": False, "error_code": "..."}
-    Error Handling: Uses structured error_code (no user-facing prose).
-    Fallback: Missing medication_id entries are skipped.
-    """
     logger.info("get_user_prescriptions user_id=%r", user_id)
 
     user, err = _get_user(user_id)
@@ -160,18 +120,8 @@ def get_user_prescriptions(user_id: str) -> dict:
     }
 
 
-def user_has_prescription(user_id: str, medication_query: str) -> dict:
-    """
-    Name: user_has_prescription
-    Purpose: Check whether a user is prescribed a specific medication.
-    Inputs: user_id: str, medication_query: str
-    Output:
-      - Success: {"ok": True, "has_prescription": bool, "med": {...}, "user": {...}}
-      - Failure: {"ok": False, "error_code": "..."}
-    Error Handling: Uses structured error_code (no user-facing prose).
-    Fallback: Medication matching uses substring match; first match wins.
-    """
-    logger.info("user_has_prescription user_id=%r query=%r", user_id, medication_query)
+def check_user_prescription(user_id: str, medication_query: str) -> dict:
+    logger.info("check_user_prescription user_id=%r medication_query=%r", user_id, medication_query)
 
     user, err = _get_user(user_id)
     if err:
@@ -186,7 +136,50 @@ def user_has_prescription(user_id: str, medication_query: str) -> dict:
 
     return {
         "ok": True,
-        "has_prescription": summary["medication_id"] in prescribed,
-        "med": summary,
         "user": {"user_id": user.get("user_id"), "full_name": user.get("full_name")},
+        "med": summary,
+        "has_prescription": summary["medication_id"] in prescribed,
     }
+
+
+def tool_schemas() -> list[dict[str, Any]]:
+    # JSON schemas passed to OpenAI tool-calling (function tools).
+    return [
+        {
+            "type": "function",
+            "name": "get_medication",
+            "description": "Fetch factual medication label info + rx_required + in_stock from the demo DB.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Medication name (brand/generic/alias) or a sentence containing it."}
+                },
+                "required": ["query"],
+            },
+        },
+        {
+            "type": "function",
+            "name": "get_user_prescriptions",
+            "description": "Fetch the selected demo user's prescriptions list (med summaries).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Demo user_id from the UI dropdown."}
+                },
+                "required": ["user_id"],
+            },
+        },
+        {
+            "type": "function",
+            "name": "check_user_prescription",
+            "description": "Check whether the selected demo user has a prescription for a specific medication.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Demo user_id from the UI dropdown."},
+                    "medication_query": {"type": "string", "description": "Medication name (brand/generic/alias) or a sentence containing it."},
+                },
+                "required": ["user_id", "medication_query"],
+            },
+        },
+    ]
