@@ -8,7 +8,7 @@ from openai import OpenAI
 
 from app.schemas import ChatRequest
 from app import tools as local_tools
-from app.tool_schemas import TOOLS
+from app.tools import TOOLS
 from app.db import USERS_BY_ID
 from app.prompt import build_system_prompt
 
@@ -53,8 +53,10 @@ def _call_local_tool(name: str, args: dict, user_id: str | None) -> dict:
     if name == "get_user_prescriptions":
         return local_tools.get_user_prescriptions(user_id or "")
 
-    if name == "check_user_prescription":
-        return local_tools.check_user_prescription(user_id or "", args.get("medication_query", ""))
+    if name == "list_medications":
+        rx_filter = args.get("rx_filter", "both")
+        stock_filter = args.get("stock_filter", "both")
+        return local_tools.list_medications(rx_filter=rx_filter, stock_filter=stock_filter)
 
     raise RuntimeError(f"Unknown tool requested: {name}")
 
@@ -64,7 +66,6 @@ def handle_chat(payload: ChatRequest) -> dict:
 
     user = USERS_BY_ID.get((payload.user_id or "").strip()) if payload.user_id else None
     user_name = (user.get("full_name") if user else None) or "there"
-
 
     system_prompt = build_system_prompt(user_name)
 

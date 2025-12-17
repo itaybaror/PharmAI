@@ -1,10 +1,69 @@
 # app/tools.py
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from app.db import MEDS, USERS_BY_ID, MEDS_BY_ID
 
 logger = logging.getLogger("app.tools")
+
+
+# ----------------------------
+# Tool schemas (Responses API)
+# NOTE: user_id is passed by the server (UI dropdown). The model should not guess it.
+# ----------------------------
+TOOLS: list[dict[str, Any]] = [
+    {
+        "type": "function",
+        "name": "get_medication",
+        "description": "Fetch factual medication info (label facts), prescription requirement, and stock from the demo DB.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Medication name, brand, or alias (free text).",
+                },
+            },
+            "required": ["query"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "get_user_prescriptions",
+        "description": "List the selected demo user's prescriptions (user is provided by the server).",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "type": "function",
+        "name": "list_medications",
+        "description": (
+            "List medications available in the demo pharmacy database, with optional filters for Rx requirement and stock status."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "rx_filter": {
+                    "type": "string",
+                    "enum": ["rx", "non_rx", "both"],
+                    "description": "Filter by prescription requirement.",
+                },
+                "stock_filter": {
+                    "type": "string",
+                    "enum": ["in_stock", "out_of_stock", "both"],
+                    "description": "Filter by stock status.",
+                },
+            },
+            "required": [],
+            "additionalProperties": False,
+        },
+    },
+]
 
 
 def _norm(s: str) -> str:
@@ -120,66 +179,24 @@ def get_user_prescriptions(user_id: str) -> dict:
     }
 
 
-def check_user_prescription(user_id: str, medication_query: str) -> dict:
-    logger.info("check_user_prescription user_id=%r medication_query=%r", user_id, medication_query)
+def list_medications(
+    rx_filter: Literal["rx", "non_rx", "both"] = "both",
+    stock_filter: Literal["in_stock", "out_of_stock", "both"] = "both",
+) -> dict:
+    logger.info("list_medications rx_filter=%s stock_filter=%s", rx_filter, stock_filter)
 
-    user, err = _get_user(user_id)
-    if err:
-        return err
+    def _rx_ok(m: dict) -> bool:
+        rx = bool(m.get("rx_required"))
+        return True if rx_filter == "both" else (rx if rx_filter == "rx" else (not rx))
 
-    med, err = _get_medication(medication_query)
-    if err:
-        return err
+    def _stock_ok(m: dict) -> bool:
+        st = bool(m.get("in_stock", True))
+        return True if stock_filter == "both" else (st if stock_filter == "in_stock" else (not st))
 
-    prescribed = set(user.get("prescribed_medications") or [])
-    summary = _med_summary(med)
+    meds: list[dict] = []
+    for med in MEDS:
+        summary = _med_summary(med)
+        if _rx_ok(summary) and _stock_ok(summary):
+            meds.append(summary)
 
-    return {
-        "ok": True,
-        "user": {"user_id": user.get("user_id"), "full_name": user.get("full_name")},
-        "med": summary,
-        "has_prescription": summary["medication_id"] in prescribed,
-    }
-
-
-def tool_schemas() -> list[dict[str, Any]]:
-    # JSON schemas passed to OpenAI tool-calling (function tools).
-    return [
-        {
-            "type": "function",
-            "name": "get_medication",
-            "description": "Fetch factual medication label info + rx_required + in_stock from the demo DB.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Medication name (brand/generic/alias) or a sentence containing it."}
-                },
-                "required": ["query"],
-            },
-        },
-        {
-            "type": "function",
-            "name": "get_user_prescriptions",
-            "description": "Fetch the selected demo user's prescriptions list (med summaries).",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "user_id": {"type": "string", "description": "Demo user_id from the UI dropdown."}
-                },
-                "required": ["user_id"],
-            },
-        },
-        {
-            "type": "function",
-            "name": "check_user_prescription",
-            "description": "Check whether the selected demo user has a prescription for a specific medication.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "user_id": {"type": "string", "description": "Demo user_id from the UI dropdown."},
-                    "medication_query": {"type": "string", "description": "Medication name (brand/generic/alias) or a sentence containing it."},
-                },
-                "required": ["user_id", "medication_query"],
-            },
-        },
-    ]
+    return {"ok": True, "medications": meds}
