@@ -19,12 +19,8 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 
 def _conversation_to_messages(conversation: List[dict]) -> List[dict]:
     """
-    UI stores conversation as:
-      [{"role":"user","content":"..."}, {"role":"assistant","content":"..."}]
-
-    Responses API expects:
-      {"role":"user","content":[{"type":"input_text","text":"..."}]}
-      {"role":"assistant","content":[{"type":"output_text","text":"..."}]}
+    Convert our simple Gradio history format into the OpenAI Responses API message format
+    (role + typed content blocks). The API won’t accept metadata like gradio’s chat history does.
     """
     msgs: List[Dict[str, Any]] = []
     for m in conversation or []:
@@ -37,6 +33,7 @@ def _conversation_to_messages(conversation: List[dict]) -> List[dict]:
 
 
 def _tool_call_to_input_item(call: Any) -> Dict[str, Any]:
+    """Normalize a tool call event into a Responses API input item dict."""
     return {
         "type": "function_call",
         "call_id": getattr(call, "call_id", None),
@@ -46,6 +43,7 @@ def _tool_call_to_input_item(call: Any) -> Dict[str, Any]:
 
 
 def _call_local_tool(name: str, args: dict, user_id: str | None) -> dict:
+    """Execute a local tool by name with args, returning its output dict."""
     # user_id comes from the dropdown; do not rely on model-supplied user_id
     if name == "get_medication":
         return local_tools.get_medication(args.get("query", ""))
@@ -77,8 +75,10 @@ def stream_chat(conversation: List[dict], user_id: str | None) -> Iterator[str]:
 
     assistant_text = ""
 
+    # This loop ends when there are no more tool calls requested
     for _ in range(8):  # loop guard
         # 1) Stream model output
+        # Loops back to this when tool calls are done
         with client.responses.stream(
             model=MODEL,
             instructions=system_prompt,
@@ -99,7 +99,7 @@ def stream_chat(conversation: List[dict], user_id: str | None) -> Iterator[str]:
         # After streaming completes, get the final response
         final = stream.get_final_response()
 
-        # 2) If model asked for tools, execute them and loop
+        # Loop handles multiple tool calls per response
         tool_calls = [it for it in (final.output or []) if getattr(it, "type", None) == "function_call"]
         if not tool_calls:
             return  # done (we already yielded the final text)
