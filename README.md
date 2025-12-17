@@ -168,30 +168,41 @@ app/
 
 </details>
 
+<details>
+<summary><strong>Statelessness</strong></summary>
+
+- The agent backend is completely stateless
+- No chat history, user context, or session data is stored on the server
+- All conversational context is sent from the UI with each request
+- Every request is self-contained and independently reproducible
+- **Why this matters:**
+   - Predictable behavior with no hidden memory
+   - Easier debugging and replay of conversations
+   - Horizontal scalability without coordination
+   - Reduced risk of state leakage or corruption
+
+</details>
+
 
 
 ## Resources & References
 
 This project was designed and planned using the following resources and documentation:
 
-- **OpenAI Responses API**
-  - https://platform.openai.com/docs/guides/responses
-  - Used for unified text generation, tool-calling, and streaming.
+**OpenAI Responses API**https://platform.openai.com/docs/guides/responsesUsed for unified text generation, tool-calling, and streaming.
 
-- **OpenAI Function / Tool Calling**
-  - https://platform.openai.com/docs/guides/function-calling
-  - Reference for structured tool schemas and deterministic tool execution.
+**OpenAI Function / Tool Calling**https://platform.openai.com/docs/guides/function-callingReference for structured tool schemas and deterministic tool execution.
 
-- **GPT-5 Prompting Guide**
-  - https://cookbook.openai.com/examples/gpt-5/gpt-5_prompting_guide
-  - Used to design strict, policy-driven system prompts.
+**GPT-5 Prompting Guide**
+https://cookbook.openai.com/examples/gpt-5/gpt-5_prompting_guide
+Used to design strict, policy-driven system prompts.
 
-- **Gradio ChatInterface**
-  - https://www.gradio.app/docs/gradio/chatinterface
-  - Used for building the streaming chat UI.
+**Gradio ChatInterface**
+https://www.gradio.app/docs/gradio/chatinterface
+Used for building the streaming chat UI.
 
-- **Building Effective Agents - Anthropic**
-  - https://www.anthropic.com/engineering/building-effective-agents
-  - Provided insights into agent loop design and safety considerations.
+**Building Effective Agents - Anthropic**
+https://www.anthropic.com/engineering/building-effective-agents
+Provided insights into agent loop design and safety considerations.
 
 These references guided the architectural decisions, agent loop design, prompt structure, and streaming behavior used in PharmAI.
