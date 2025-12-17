@@ -133,6 +133,8 @@ celerybeat.pid
 
 resources.md
 template.py
+run.sh
+build.sh
 # SageMath parsed files
 *.sage.py
 
