@@ -74,6 +74,8 @@ The agent should maintain context across turns and use tools incrementally as ne
 - No hallucinated or inferred medical information
 - Responses scoped strictly to the user’s question
 
+![Flow 1 – Prescription Overview](docs/images/f11.png)
+
 
 
 ## Flow 2: Medication Lookup → Prescription Requirement → Stock Status
