@@ -74,7 +74,10 @@ The agent should maintain context across turns and use tools incrementally as ne
 - No hallucinated or inferred medical information
 - Responses scoped strictly to the user’s question
 
-![Flow 1 – Prescription Overview](docs/images/f11.png)
+![Flow 1 – 1](images/f11.png)
+![Flow 1 – 2](images/f12.png)
+![Flow 1 – 3](images/f13.png)
+![Flow 1 – logs](images/f1logs.png)
 
 
 
@@ -108,7 +111,10 @@ Understand whether a medication requires a prescription and if it is available.
 - Correct field-level response selection
 - No extra explanation beyond requested data
 
-
+![Flow 2 – 1](images/f21.png)
+![Flow 2 – 2](images/f22.png)
+![Flow 2 – 3](images/f23.png)
+![Flow 2 – logs](images/f2logs.png)
 
 ## Flow 3: Inventory Discovery → Follow-Up Filtering
 
@@ -139,7 +145,9 @@ Explore what medications are available in the pharmacy.
 - Accurate inventory listing
 - Clean, readable output
 
-
+![Flow 3 – 1](images/f31.png)
+![Flow 3 – 2](images/f32.png)
+![Flow 3 – logs](images/f3logs.png)
 
 ## General Evaluation Checks
 
