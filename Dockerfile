@@ -19,8 +19,5 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # (Optional) Print logs immediately (no buffering), nicer for Docker logs
 ENV PYTHONUNBUFFERED=1
 
-# Define environment variable
-ENV NAME World
-
 # Run app.py when the container launches
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
