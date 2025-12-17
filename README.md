@@ -145,6 +145,7 @@ app/
 - The model is forbidden (by prompt) from inventing facts
 - Tool outputs are treated as authoritative
 - Errors are handled explicitly via error codes
+- Number of tools is kept minimal and highly focused as descried as best practice in OpenAI documentation
 
 </details>
 
@@ -182,8 +183,14 @@ app/
    - Reduced risk of state leakage or corruption
 
 </details>
+<br>
 
-
+> Note:
+> During early development, I initially misunderstood what is commonly meant by an “agent” and workflows and implemented **deterministic AI workflows** instead of a model-driven agent loop.
+>
+> These workflows worked well but differed from agent-loop design.
+>
+> The deterministic implementation is preserved in the **`deterministic` branch**.
 
 ## Resources & References
 
