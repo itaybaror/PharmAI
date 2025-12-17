@@ -8,29 +8,27 @@ A demo pharmacy assistant built with OpenAI’s Responses API, structured tool-c
 - [Getting Started](#getting-started)
 - [Architecture](#architecture)
 - [Design Decisions](#design-decisions)
-- [Final Notes](#final-notes)
+- [Resources & References](#resources--references)
 
 ## About the Project
 
-PharmAI is a demo AI-powered pharmacy assistant designed to demonstrate how to build a clean, reliable, and debuggable LLM agent using modern OpenAI primitives.
+PharmAI is a **demo AI-powered pharmacy assistant** that answers factual questions about medications and prescriptions using a controlled, tool-driven approach.
 
-The project prioritizes correctness, transparency, and explicit control over agent behavior, rather than abstraction-heavy frameworks.
+To use the app, select a **demo user** from the dropdown and interact with the assistant as that user.
 
-Core concepts demonstrated:
-- OpenAI Responses API
-- Structured tool-calling
-- True server-side streaming
-- Strict separation between model reasoning and authoritative data
-
-The assistant allows users to:
-- Query medication label information (ingredients, warnings, dosage, prescription requirement, stock)
-- View a demo user’s prescriptions
+Users can:
+- Look up medication label information (ingredients, warnings, dosage text, prescription requirement, stock)
+- View a selected demo user’s prescriptions
 - List medications available in the pharmacy database
-- Ask follow-up questions with conversational context
+- Ask follow-up questions in a conversational flow
 
-Disclaimer:
-This is a demo system only. It does not provide medical advice and cannot perform real-world actions.
+The assistant is intentionally **limited**: it does not provide medical advice, make recommendations, refill prescriptions, or perform real-world actions. All medication data comes from a fixed demo database, and the assistant only responds using information returned by explicit tools. Additionally the assistant knows when a request is out-of-scope and directs the user to speak with a medical professional.
 
+This project serves as a reference example of how to build a **predictable, auditable, and safe** conversational assistant for pharmacy-style use cases.
+
+> ⚠️ **Disclaimer**  
+> This is a demo system only. It does not provide medical advice and cannot perform real-world pharmacy actions.
+> All medication data and user profiles in this project are **synthetic** and created solely for demonstration purposes.
 
 
 ## Getting Started
@@ -172,10 +170,28 @@ app/
 
 
 
-## Final Notes
+## Resources & References
 
-PharmAI is intentionally small, explicit, and opinionated.
+This project was designed and planned using the following resources and documentation:
 
-The goal of this project is to show how agents actually work, without hiding behavior behind abstractions or frameworks.
+- **OpenAI Responses API**
+  - https://platform.openai.com/docs/guides/responses
+  - Used for unified text generation, tool-calling, and streaming.
 
-If you are reviewing this project, start with `agent.py`. Everything flows from there.
+- **OpenAI Function / Tool Calling**
+  - https://platform.openai.com/docs/guides/function-calling
+  - Reference for structured tool schemas and deterministic tool execution.
+
+- **GPT-5 Prompting Guide**
+  - https://cookbook.openai.com/examples/gpt-5/gpt-5_prompting_guide
+  - Used to design strict, policy-driven system prompts.
+
+- **Gradio ChatInterface**
+  - https://www.gradio.app/docs/gradio/chatinterface
+  - Used for building the streaming chat UI.
+
+- **Building Effective Agents - Anthropic**
+  - https://www.anthropic.com/engineering/building-effective-agents
+  - Provided insights into agent loop design and safety considerations.
+
+These references guided the architectural decisions, agent loop design, prompt structure, and streaming behavior used in PharmAI.
