@@ -18,27 +18,24 @@ TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "name": "get_user_prescriptions",
-        "description": "List a demo user's prescriptions (resolved to medication summaries) from the demo DB.",
+        "description": "List the selected demo user's prescriptions (user is provided by the server).",
         "parameters": {
             "type": "object",
-            "properties": {
-                "user_id": {"type": "string", "description": "Demo user id like 'u001'."},
-            },
-            "required": ["user_id"],
+            "properties": {},
+            "required": [],
             "additionalProperties": False,
         },
     },
     {
         "type": "function",
         "name": "check_user_prescription",
-        "description": "Check if a demo user has a prescription for a medication in the demo DB.",
+        "description": "Check if the selected demo user has a prescription for a medication in the demo DB (user is provided by the server).",
         "parameters": {
             "type": "object",
             "properties": {
-                "user_id": {"type": "string", "description": "Demo user id like 'u001'."},
                 "medication_query": {"type": "string", "description": "Medication name, brand, or alias (free text)."},
             },
-            "required": ["user_id", "medication_query"],
+            "required": ["medication_query"],
             "additionalProperties": False,
         },
     },

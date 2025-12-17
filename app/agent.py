@@ -1,3 +1,4 @@
+# app/agent.py
 import os
 import json
 import logging
@@ -14,40 +15,45 @@ logger = logging.getLogger("app.agent")
 client = OpenAI()
 MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 
-TOOL_IMPL = {
-    "get_medication": local_tools.get_medication,
-    "get_user_prescriptions": local_tools.get_user_prescriptions,
-    "check_user_prescription": local_tools.check_user_prescription,
-}
-
 
 def _conversation_to_messages(conversation: List[dict]) -> List[dict]:
-    msgs = []
+    # IMPORTANT: everything you send in `input` is "input_*" (even prior assistant turns).
+    msgs: List[Dict[str, Any]] = []
     for m in conversation or []:
-        role = m.get("role")
+        role = (m.get("role") or "").strip().lower()
         content = str(m.get("content") or "").strip()
         if role in {"user", "assistant"} and content:
             msgs.append(
                 {
                     "role": role,
-                    "content": [
-                        {
-                            "type": "input_text" if role == "user" else "output_text",
-                            "text": content,
-                        }
-                    ],
+                    "content": [{"type": "input_text", "text": content}],
                 }
             )
     return msgs
 
 
-def _to_dict(item: Any) -> dict:
-    # SDK output items are Pydantic models; convert safely to plain dict
-    if hasattr(item, "model_dump"):
-        return item.model_dump()
-    if isinstance(item, dict):
-        return item
-    return {"type": getattr(item, "type", "unknown")}
+def _tool_call_to_input_item(call: Any) -> Dict[str, Any]:
+    # Keep ONLY the fields the API expects for a tool call item.
+    return {
+        "type": "function_call",
+        "call_id": getattr(call, "call_id", None),
+        "name": getattr(call, "name", None),
+        "arguments": getattr(call, "arguments", None) or "{}",
+    }
+
+
+def _call_local_tool(name: str, args: dict, user_id: str | None) -> dict:
+    # user_id is selected by dropdown; do NOT rely on the model to provide it.
+    if name == "get_medication":
+        return local_tools.get_medication(args.get("query", ""))
+
+    if name == "get_user_prescriptions":
+        return local_tools.get_user_prescriptions(user_id or "")
+
+    if name == "check_user_prescription":
+        return local_tools.check_user_prescription(user_id or "", args.get("medication_query", ""))
+
+    raise RuntimeError(f"Unknown tool requested: {name}")
 
 
 def handle_chat(payload: ChatRequest) -> dict:
@@ -61,9 +67,10 @@ def handle_chat(payload: ChatRequest) -> dict:
         "- Ask for clarification only if required inputs are missing.\n"
         "- If the user asks for medical advice, recommend consulting a clinician.\n"
         "- Be concise and clear.\n"
+        "- If the user asks about prescriptions, use the selected demo user (provided by the server).\n"
     )
 
-    for _ in range(8):  # small guard against infinite tool loops
+    for _ in range(8):  # guard against infinite tool loops
         resp = client.responses.create(
             model=MODEL,
             instructions=system_prompt,
@@ -74,14 +81,13 @@ def handle_chat(payload: ChatRequest) -> dict:
         )
 
         output_items = resp.output or []
-
         tool_calls = [it for it in output_items if getattr(it, "type", None) == "function_call"]
 
-        # No tool calls => return the assistant text
+        # No tool calls => return final assistant text
         if not tool_calls:
             return {"assistant": resp.output_text or ""}
 
-        # Execute tool calls and append results exactly like the docs
+        # Execute tool calls and append results like the docs
         for call in tool_calls:
             name = getattr(call, "name", None)
             call_id = getattr(call, "call_id", None)
@@ -90,25 +96,24 @@ def handle_chat(payload: ChatRequest) -> dict:
             if not name or not call_id:
                 raise RuntimeError("Malformed tool call from model (missing name/call_id).")
 
-            fn = TOOL_IMPL.get(name)
-            if not fn:
-                raise RuntimeError(f"Unknown tool requested: {name}")
-
             try:
                 args = json.loads(raw_args) if isinstance(raw_args, str) else (raw_args or {})
             except Exception:
                 args = {}
 
             try:
-                result = fn(**args)
+                result = _call_local_tool(name, args, payload.user_id)
             except Exception as e:
                 logger.exception("Tool execution failed: %s", name)
                 result = {"ok": False, "error": str(e)}
 
-            # Append the tool call itself (as dict)
-            messages.append(_to_dict(call))
+            # Append the tool call item (so the call_id exists in the next request)
+            call_item = _tool_call_to_input_item(call)
+            if not call_item.get("call_id") or not call_item.get("name"):
+                raise RuntimeError("Malformed tool call item after normalization.")
+            messages.append(call_item)
 
-            # Append the tool output (output MUST be a string to avoid input[x].output type errors)
+            # Append the tool output (MUST be a string)
             messages.append(
                 {
                     "type": "function_call_output",
