@@ -9,6 +9,8 @@ from openai import OpenAI
 from app.schemas import ChatRequest
 from app import tools as local_tools
 from app.tool_schemas import TOOLS
+from app.db import USERS_BY_ID
+from app.prompt import build_system_prompt
 
 logger = logging.getLogger("app.agent")
 
@@ -23,10 +25,11 @@ def _conversation_to_messages(conversation: List[dict]) -> List[dict]:
         role = (m.get("role") or "").strip().lower()
         content = str(m.get("content") or "").strip()
         if role in {"user", "assistant"} and content:
+            content_type = "input_text" if role == "user" else "output_text"
             msgs.append(
                 {
                     "role": role,
-                    "content": [{"type": "input_text", "text": content}],
+                    "content": [{"type": content_type, "text": content}],
                 }
             )
     return msgs
@@ -59,16 +62,11 @@ def _call_local_tool(name: str, args: dict, user_id: str | None) -> dict:
 def handle_chat(payload: ChatRequest) -> dict:
     messages: List[Dict[str, Any]] = _conversation_to_messages(payload.conversation)
 
-    system_prompt = (
-        "You are PharmAI, a pharmacy assistant.\n"
-        "Rules:\n"
-        "- Use tools whenever factual DB info is required.\n"
-        "- Never invent medication, stock, or prescription data.\n"
-        "- Ask for clarification only if required inputs are missing.\n"
-        "- If the user asks for medical advice, recommend consulting a clinician.\n"
-        "- Be concise and clear.\n"
-        "- If the user asks about prescriptions, use the selected demo user (provided by the server).\n"
-    )
+    user = USERS_BY_ID.get((payload.user_id or "").strip()) if payload.user_id else None
+    user_name = (user.get("full_name") if user else None) or "there"
+
+
+    system_prompt = build_system_prompt(user_name)
 
     for _ in range(8):  # guard against infinite tool loops
         resp = client.responses.create(
