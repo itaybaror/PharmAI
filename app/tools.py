@@ -10,12 +10,17 @@ logger = logging.getLogger("app.tools")
 # ----------------------------
 # Tool schemas (Responses API)
 # NOTE: user_id is passed by the server (UI dropdown). The model should not guess it.
+# Strict mode notes:
+# - strict=true
+# - additionalProperties=false
+# - all properties must be required (use null type to represent "optional")
 # ----------------------------
 TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "name": "get_medication",
         "description": "Fetch factual medication info (label facts), prescription requirement, and stock from the demo DB.",
+        "strict": True,
         "parameters": {
             "type": "object",
             "properties": {
@@ -32,6 +37,7 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "name": "get_user_prescriptions",
         "description": "List the selected demo user's prescriptions (user is provided by the server).",
+        "strict": True,
         "parameters": {
             "type": "object",
             "properties": {},
@@ -42,24 +48,23 @@ TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
         "name": "list_medications",
-        "description": (
-            "List medications available in the demo pharmacy database, with optional filters for Rx requirement and stock status."
-        ),
+        "description": "List medications available in the demo pharmacy database, with optional filters for Rx requirement and stock status.",
+        "strict": True,
         "parameters": {
             "type": "object",
             "properties": {
                 "rx_filter": {
-                    "type": "string",
-                    "enum": ["rx", "non_rx", "both"],
-                    "description": "Filter by prescription requirement.",
+                    "type": ["string", "null"],
+                    "enum": ["rx", "non_rx", "both", None],
+                    "description": "Filter by prescription requirement. Use null to mean default (both).",
                 },
                 "stock_filter": {
-                    "type": "string",
-                    "enum": ["in_stock", "out_of_stock", "both"],
-                    "description": "Filter by stock status.",
+                    "type": ["string", "null"],
+                    "enum": ["in_stock", "out_of_stock", "both", None],
+                    "description": "Filter by stock status. Use null to mean default (both).",
                 },
             },
-            "required": [],
+            "required": ["rx_filter", "stock_filter"],
             "additionalProperties": False,
         },
     },
@@ -67,10 +72,12 @@ TOOLS: list[dict[str, Any]] = [
 
 
 def _norm(s: str) -> str:
+    """Lowercase + trim + collapse whitespace."""
     return " ".join((s or "").strip().lower().split())
 
 
 def _find_medication_in_text(text: str) -> dict | None:
+    """Return the first medication whose brand/generic/alias appears in text (substring match)."""
     t = _norm(text)
     if not t:
         return None
@@ -93,6 +100,7 @@ def _find_medication_in_text(text: str) -> dict | None:
 
 
 def _get_user(user_id: str) -> tuple[dict | None, dict | None]:
+    """Resolve a demo user by id; returns (user, error_dict)."""
     uid = (user_id or "").strip()
     if not uid:
         return None, {"ok": False, "error_code": "MISSING_USER_ID"}
@@ -105,6 +113,7 @@ def _get_user(user_id: str) -> tuple[dict | None, dict | None]:
 
 
 def _get_medication(query: str) -> tuple[dict | None, dict | None]:
+    """Resolve a demo medication from free-text; returns (med, error_dict)."""
     q = (query or "").strip()
     if not q:
         return None, {"ok": False, "error_code": "MISSING_MEDICATION_QUERY"}
@@ -117,6 +126,7 @@ def _get_medication(query: str) -> tuple[dict | None, dict | None]:
 
 
 def _med_summary(med: dict) -> dict:
+    """Common med summary payload used by tools."""
     brand = med.get("brand_name") or ""
     generic = med.get("generic_name") or ""
     strength = med.get("strength") or ""
@@ -134,6 +144,13 @@ def _med_summary(med: dict) -> dict:
 
 
 def get_medication(query: str) -> dict:
+    """
+    Tool: get_medication
+    Purpose: Return factual medication data from the demo DB (ingredients, warnings, dosage text, Rx requirement, stock).
+    Returns:
+      - {"ok": True, "med": {...}}
+      - {"ok": False, "error_code": "..."}
+    """
     logger.info("get_medication query=%r", query)
 
     med, err = _get_medication(query)
@@ -160,6 +177,13 @@ def get_medication(query: str) -> dict:
 
 
 def get_user_prescriptions(user_id: str) -> dict:
+    """
+    Tool: get_user_prescriptions
+    Purpose: Return the selected demo user's prescriptions as medication summaries.
+    Returns:
+      - {"ok": True, "user": {...}, "prescriptions": [...]}
+      - {"ok": False, "error_code": "..."}
+    """
     logger.info("get_user_prescriptions user_id=%r", user_id)
 
     user, err = _get_user(user_id)
@@ -180,9 +204,17 @@ def get_user_prescriptions(user_id: str) -> dict:
 
 
 def list_medications(
-    rx_filter: Literal["rx", "non_rx", "both"] = "both",
-    stock_filter: Literal["in_stock", "out_of_stock", "both"] = "both",
+    rx_filter: Literal["rx", "non_rx", "both"] | None = None,
+    stock_filter: Literal["in_stock", "out_of_stock", "both"] | None = None,
 ) -> dict:
+    """
+    Tool: list_medications
+    Purpose: List medications in the demo DB with optional filters.
+      - rx_filter: rx / non_rx / both (or None => both)
+      - stock_filter: in_stock / out_of_stock / both (or None => both)
+    """
+    rx_filter = rx_filter or "both"
+    stock_filter = stock_filter or "both"
     logger.info("list_medications rx_filter=%s stock_filter=%s", rx_filter, stock_filter)
 
     def _rx_ok(m: dict) -> bool:
