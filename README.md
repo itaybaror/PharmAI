@@ -41,7 +41,7 @@ This project serves as a reference example of how to build a **predictable, audi
 
 2. Environment Variables
 
-      Create a `.env` file or export the variable:
+      Create a `.env` file and add this variable to it:
 
       ```sh
       OPENAI_API_KEY=your_api_key_here
