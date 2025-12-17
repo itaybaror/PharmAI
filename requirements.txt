@@ -1,7 +1,4 @@
 fastapi
 uvicorn
-pydantic
-python-dotenv
 openai
 gradio>=4.26
-requests
