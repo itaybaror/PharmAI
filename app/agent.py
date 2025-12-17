@@ -2,7 +2,7 @@
 import os
 import json
 import logging
-from typing import List, Dict, Any
+from typing import Any, Dict, Iterator, List
 
 from openai import OpenAI
 
@@ -19,30 +19,24 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-5")
 
 def _conversation_to_messages(conversation: List[dict]) -> List[dict]:
     """
-    Gradio ChatInterface history is stored in a simple format:
+    UI stores conversation as:
       [{"role":"user","content":"..."}, {"role":"assistant","content":"..."}]
 
-    The Responses API expects messages shaped like:
+    Responses API expects:
       {"role":"user","content":[{"type":"input_text","text":"..."}]}
       {"role":"assistant","content":[{"type":"output_text","text":"..."}]}
-
-    So we do a small conversion here (and keep only user/assistant text turns).
     """
     msgs: List[Dict[str, Any]] = []
     for m in conversation or []:
         role = (m.get("role") or "").strip().lower()
-        content = str(m.get("content") or "").strip()
-        if role in {"user", "assistant"} and content:
+        text = str(m.get("content") or "").strip()
+        if role in {"user", "assistant"} and text:
             content_type = "input_text" if role == "user" else "output_text"
-            msgs.append({"role": role, "content": [{"type": content_type, "text": content}]})
+            msgs.append({"role": role, "content": [{"type": content_type, "text": text}]})
     return msgs
 
 
 def _tool_call_to_input_item(call: Any) -> Dict[str, Any]:
-    """
-    When we loop, we must include the original tool call item back in `input`
-    so the API can match our later function_call_output by call_id.
-    """
     return {
         "type": "function_call",
         "call_id": getattr(call, "call_id", None),
@@ -52,11 +46,7 @@ def _tool_call_to_input_item(call: Any) -> Dict[str, Any]:
 
 
 def _call_local_tool(name: str, args: dict, user_id: str | None) -> dict:
-    """
-    Execute the local Python tool implementation.
-    Note: user_id comes from the UI dropdown and is injected server-side.
-    The model should not be trusted to supply it.
-    """
+    # user_id comes from the dropdown; do not rely on model-supplied user_id
     if name == "get_medication":
         return local_tools.get_medication(args.get("query", ""))
 
@@ -72,12 +62,12 @@ def _call_local_tool(name: str, args: dict, user_id: str | None) -> dict:
     raise RuntimeError(f"Unknown tool requested: {name}")
 
 
-def handle_chat(conversation: List[dict], user_id: str | None) -> dict:
+def stream_chat(conversation: List[dict], user_id: str | None) -> Iterator[str]:
     """
-    Non-streaming agent loop:
-      - Call the model with tools enabled
-      - If it requests tools, execute them and append tool call + tool output
-      - Repeat until the model returns final text (or we hit a loop guard)
+    Proper streaming tool loop:
+      - stream a response, yielding text deltas
+      - after stream completes, if tool calls exist: execute tools, append tool outputs, repeat
+    Yields the FULL assistant text so far each time (ideal for Gradio).
     """
     messages: List[Dict[str, Any]] = _conversation_to_messages(conversation)
 
@@ -85,27 +75,36 @@ def handle_chat(conversation: List[dict], user_id: str | None) -> dict:
     user_name = (user.get("full_name") if user else None) or "there"
     system_prompt = build_system_prompt(user_name)
 
-    for _ in range(8):  # guard against infinite tool loops
-        resp = client.responses.create(
+    assistant_text = ""
+
+    for _ in range(8):  # loop guard
+        # 1) Stream model output
+        with client.responses.stream(
             model=MODEL,
             instructions=system_prompt,
             input=messages,
             tools=TOOLS,
             tool_choice="auto",
             store=False,
-        )
+        ) as stream:
+            for event in stream:
+                if getattr(event, "type", None) == "response.output_text.delta":
+                    delta = getattr(event, "delta", "") or ""
+                    if delta:
+                        assistant_text += delta
+                        yield assistant_text
 
-        # iterate response.output, execute function calls, append outputs.
-        tool_call_found = False
-        for item in (resp.output or []):
-            if getattr(item, "type", None) != "function_call":
-                continue
+        final = stream.get_final_response()
 
-            tool_call_found = True
+        # 2) If model asked for tools, execute them and loop
+        tool_calls = [it for it in (final.output or []) if getattr(it, "type", None) == "function_call"]
+        if not tool_calls:
+            return  # done (we already yielded the final text)
 
-            name = getattr(item, "name", None)
-            call_id = getattr(item, "call_id", None)
-            raw_args = getattr(item, "arguments", None) or "{}"
+        for call in tool_calls:
+            name = getattr(call, "name", None)
+            call_id = getattr(call, "call_id", None)
+            raw_args = getattr(call, "arguments", None) or "{}"
 
             if not name or not call_id:
                 raise RuntimeError("Malformed tool call from model (missing name/call_id).")
@@ -121,13 +120,12 @@ def handle_chat(conversation: List[dict], user_id: str | None) -> dict:
                 logger.exception("Tool execution failed: %s", name)
                 result = {"ok": False, "error": str(e)}
 
-            # 1) Append the tool call itself so the next request can reference its call_id
-            call_item = _tool_call_to_input_item(item)
+            # Append tool call + output so the next request can continue correctly
+            call_item = _tool_call_to_input_item(call)
             if not call_item.get("call_id") or not call_item.get("name"):
                 raise RuntimeError("Malformed tool call item after normalization.")
             messages.append(call_item)
 
-            # 2) Append the tool output (output must be a STRING)
             messages.append(
                 {
                     "type": "function_call_output",
@@ -136,8 +134,4 @@ def handle_chat(conversation: List[dict], user_id: str | None) -> dict:
                 }
             )
 
-        # If the model didn't request tools, we're done: return the assistant text.
-        if not tool_call_found:
-            return {"assistant": resp.output_text or ""}
-
-    return {"assistant": "I ran into a loop while trying to complete that. Can you rephrase your request?"}
+    yield assistant_text + "\n\nI ran into a loop while trying to complete that. Can you rephrase your request?"

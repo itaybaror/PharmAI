@@ -2,8 +2,7 @@
 import gradio as gr
 
 from app.db import USERS
-from app.agent import handle_chat
-
+from app.agent import stream_chat
 
 def mount_ui(app):
     user_choices = [(f"{u['full_name']} ({u['user_id']})", u["user_id"]) for u in USERS]
@@ -20,10 +19,10 @@ def mount_ui(app):
         )
 
         def _chat_fn(message: str, history: list[dict], user_id_value: str):
-            conversation = list(history or [])
+            conversation = [{"role": m.get("role"), "content": m.get("content")} for m in (history or [])]
             conversation.append({"role": "user", "content": message})
-            result = handle_chat(conversation=conversation, user_id=user_id_value)
-            return result.get("assistant", "")
+            for text in stream_chat(conversation=conversation, user_id=user_id_value):
+                yield text
 
         gr.ChatInterface(
             fn=_chat_fn,

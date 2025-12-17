@@ -4,7 +4,7 @@ import logging
 
 from fastapi import FastAPI
 
-from app.agent import handle_chat
+from app.agent import stream_chat
 from app.ui import mount_ui
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -41,7 +41,7 @@ def chat_route(payload: dict):
     # }
     conversation = payload.get("conversation") or []
     user_id = payload.get("user_id")
-    return handle_chat(conversation=conversation, user_id=user_id)
+    return stream_chat(conversation=conversation, user_id=user_id)
 
 
 if os.getenv("ENABLE_UI", "1") == "1":
