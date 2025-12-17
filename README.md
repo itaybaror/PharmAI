@@ -198,15 +198,22 @@ app/
 This repository fulfills all required deliverables for the assignment:
 
 - **README.md**  
-  This document. It explains the project, architecture, design decisions, and how to run the system using Docker.
+  This document. It explains what PharmAI does, how to run it, and the key architectural and design decisions.
 
 - **Flow Evaluation (`flow-evaluation.md`)**  
-  The remaining deliverables — **multi-step flows**, **evidence**, and **evaluation plan** — are intentionally combined into a single document:
-  - Each section defines a concrete multi-step user workflow
-  - Screenshots provide evidence of correct behavior
-  - Evaluation criteria explain how each flow is assessed
+  The evaluation deliverables are combined into a single file:
+  - Multi-step user workflows
+  - Screenshots as evidence
+  - Evaluation notes for each flow  
 
-Combining these into one file keeps the evaluation cohesive and easy to follow, while still clearly addressing each required component. The agent itself supports many additional workflows beyond those documented; the selected flows represent clear, high-signal examples aligned with the assignment requirements.
+  This keeps the evaluation concise and easy to follow while still covering all required components. The documented flows are representative examples; the agent supports additional workflows beyond those shown.
+
+  → [`flow-evaluation.md`](./docs/flow-evaluation.md)
+
+- **Tool Reference (`tools.md`)**  
+  A clear reference for all tools exposed to the agent, including their purpose, inputs, outputs, and constraints. This file exists to make the agent–tool boundary explicit and demonstrate strict separation between the model and authoritative data.
+
+  → [`tools.md`](./docs/tools.md)
 
 ## Resources & References
 
