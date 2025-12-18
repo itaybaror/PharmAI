@@ -62,11 +62,7 @@ This project serves as a reference example of how to build a **predictable, audi
          ```
 
 4. Access the Application
-
-      - API: http://localhost:8080
       - UI:  http://localhost:8080/ui
-      - FastAPI Docs: http://localhost:8080/docs
-
 
 
 ## Architecture
@@ -180,6 +176,84 @@ app/
    - Reduced risk of state leakage or corruption
 
 </details>
+
+<br>
+
+<details>
+<summary><strong>Demo vs. Production Considerations</strong></summary>
+
+This project is intentionally designed as a **demonstration system**, optimized for clarity, correctness, and reviewability rather than production readiness. Below are key areas where demo-specific choices were made, along with what would change in a real deployment.
+
+### Data Storage
+
+- **Demo choice:**  
+  The medication and user data lives in a **synthetic, in-memory Python database** (`db.py`).
+
+- **Why:**  
+  This keeps the focus on agent design, tool-calling correctness, and streaming behavior. Using SQL or NoSQL would not meaningfully improve what this project is meant to demonstrate.
+
+- **Production approach:**  
+  Data would live in a real datastore (e.g., PostgreSQL, MySQL, DynamoDB), accessed via a proper data access layer or service.
+
+---
+
+### Language Support
+
+- **Demo choice:**  
+  The database content exists primarily in English. The model responds in the user’s language, but factual fields come directly from the database.
+
+- **Trade-offs:**  
+  This avoids translating medical data at runtime (which can introduce inaccuracies), but may result in mixed-language responses.
+
+- **Production approaches:**  
+  - Store authoritative multilingual data per language (more accurate, more complex), or  
+  - Translate tool outputs in the prompt (simpler, but riskier for regulated domains).
+
+---
+
+### Authentication & User Identity
+
+- **Demo choice:**  
+  Users are selected from a dropdown of **synthetic demo users**.
+
+- **Production approach:**  
+  User identity would come from authentication (JWTs, sessions, OAuth), and tools would derive user context securely from the request.
+
+---
+
+### Error Handling & Observability
+
+- **Demo choice:**  
+  Deterministic error handling via structured `error_code`s returned by tools.
+
+- **Production approach:**  
+  Add structured logging, metrics, tracing, and alerting while keeping the same tool contracts.
+
+---
+
+### Deployment & Scaling
+
+- **Demo choice:**  
+  Single-container Docker deployment.
+
+- **Production approach:**  
+  Horizontal scaling, request timeouts, rate limiting, and background workers for long-running tasks.
+
+---
+
+### Summary
+
+These demo choices are intentional. They remove distractions and allow the core ideas to be evaluated clearly:
+
+- strict tool-based data access  
+- explicit agent control flow  
+- true server-side streaming  
+- predictable, auditable outputs  
+
+The same architectural patterns transfer directly to production once the surrounding infrastructure is swapped in.
+
+</details>
+
 <br>
 
 > Note:
